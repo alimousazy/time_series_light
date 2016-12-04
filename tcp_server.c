@@ -38,7 +38,7 @@ static int process_line(char *item, char **parts, char *sep, int n_parts) {
        str = strtok_r(NULL, ":", &cursoer);
      }
      if(!str) {
-       printf("Can't break up string\n");
+//printf("Can't break up string\n");
        break;
      }
      parts[i] = str;
@@ -56,17 +56,17 @@ static int write_data(struct tcp_server* server, char **parts) {
   int error;
   m_time = strtol(parts[TIME_POS], &endptr, 10);
   if (endptr && *endptr != '\0') {
-    printf("Can't get time %d.\n", *endptr);
+//printf("Can't get time %d.\n", *endptr);
     return -1;
   }
   value = strtof(parts[VALUE_POS], &endptr);
   if (endptr && *endptr != '\n') {
-    printf("Can't get value %f, '%c'\n", value, *endptr);
+//printf("Can't get value %f, '%c'\n", value, *endptr);
     return -1;
   }
   error = store_dp(server->ds, parts[NAME_POS], m_time, value);
   if(error < 0) {
-    printf("error storing data");
+//printf("error storing data");
     return -1;
   }
   return 0;
@@ -83,19 +83,21 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
   char *pos;
   struct range_query_result r_result;
   char outbuff[200];
+  char *start_data = "{ \"data\" : [";
+  char *end_data = " ]}";
   time_t start_date;
   s_time = strtol(parts[TIME_START_POS], &endptr, 10);
   if (endptr && *endptr != '\0') {
-    printf("Can't get time %d.\n", *endptr);
+//printf("Can't get time %d.\n", *endptr);
     return -1;
   }
   e_time = strtol(parts[TIME_END_POS], &endptr, 10);
   if (endptr && *endptr != '\0') {
-    printf("Can't get time %d.\n", *endptr);
+//printf("Can't get time %d.\n", *endptr);
     return -1;
   }
 
-  printf("reading data s_time %ld, e_time %ld \n", s_time, e_time);
+//printf("reading data s_time %ld, e_time %ld \n", s_time, e_time);
   pos = strstr(parts[NAME_POS], "\n");
   if (pos) {
     *pos = '\0';
@@ -103,18 +105,27 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
 
   r_result = get_range(server->ds, parts[NAME_POS], s_time, e_time, &error);
   if(error < 0) {
-    printf("error reading data");
     free_range_query(&r_result); 
     return -1;
   }
   start_date = r_result.start_date;
+//printf("sending data to stream \n");
+  tcpsend(sk, start_data, strlen(start_data), -1);
   for(time_t i = s_time;  i <= e_time; i++)
   {
-    sprintf(outbuff, "[%ld, %f],", i,  r_result.points[i - start_date]);
-    printf("--- %s, %lu----", outbuff, strlen(outbuff));
+    char p_template[] = "[%ld000, %f],";
+    if(i == e_time) {
+      p_template[strlen(p_template) - 1] = '\0';
+    }
+    sprintf(outbuff, p_template, i,  r_result.points[i - start_date]);
     tcpsend(sk, outbuff, strlen(outbuff), -1);
   }
+  tcpsend(sk, end_data, strlen(end_data), -1);
+//printf("done sending data to stream \n");
+//printf("flushing stream data \n");
   tcpflush(sk, -1);
+//printf("done flushing stream data \n");
+//printf("freeing memory range \n");
   free_range_query(&r_result); 
   return 0;
 }
@@ -123,41 +134,51 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
 coroutine void tcp_process_data(struct tcp_server* server, tcpsock sk) {
   int64_t deadline = now() + tcp_server_timeout;
 	char inbuf[256];
+  char *error = "Error happend";
+  char *success = "done";
+  int count = 0;
 	while (1) {
     char *parts[3];   
     int num_process = 0;
 		size_t sz = tcprecvuntil(sk, inbuf, sizeof(inbuf), "\n", 1, deadline);
-    printf("buff ---- %s\n", inbuf);
-    printf("processing connection\n");
 		inbuf[sz] = '\0';
 		if(errno != 0)
  	 	  goto cleanup;
     num_process = process_line(inbuf, parts, ":", 4);
-    printf("-hjdfiojfdsfoiud %c\n", inbuf[0]);
     switch(inbuf[0]) {
       case 'w':
         if (num_process != 4) {
-          printf("String is not  4  parts \n");
           continue;
         }
-        if( write_data(server, parts) == -1) { 
-          goto cleanup;
-        }
+        if(write_data(server, parts) != -1) {
+           tcpsend(sk, success, strlen(success), -1);
+        } else {
+           tcpsend(sk, error, strlen(error), -1);
+        };
+        tcpflush(sk, -1);
+//printf("\nWrite done\n");
+        break;
       break;
       case 'r':
-        printf("start reading");
+      printf("Read operation");
         if (num_process != 4) {
-          printf("Reading, String  is not 4 parts \n");
           continue;
         }
         if (read_data(server, parts, sk) == -1) {
-          goto cleanup;
+//printf("Error reading data");
         }
+        goto cleanup;
       break;
+    }
+    count++;
+    if ( count == TCP_SERVER_YIELD_EVERY ) {
+      printf("Yielding \n");
+      count = 0;
+      yield();
     }
 	}
 	cleanup:
-    printf("closing connection");
+//printf("closing connection \n");
 		tcpclose(sk);
 }
 

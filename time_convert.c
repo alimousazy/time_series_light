@@ -19,7 +19,7 @@ error:
   return -1;
 }
 
-time_t incr_week(time_t s) {
-  return s + 605000;
+time_t incr_week(time_t s, int length) {
+  return s + length;
 }
 

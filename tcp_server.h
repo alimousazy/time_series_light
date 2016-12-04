@@ -10,6 +10,7 @@
 #include <libmill.h>
 
 
+#define TCP_SERVER_YIELD_EVERY 1000
 
 struct tcp_server {
 	int port;
