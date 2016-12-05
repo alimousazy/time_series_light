@@ -1,4 +1,4 @@
-env = Environment()
+env = Environment(CCFLAGS='-pg')
 env.Append(CPPPATH = ['/usr/local/include/'])
 env.Append(LIBPATH = ['/usr/local/lib/'])
 

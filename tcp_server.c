@@ -81,52 +81,48 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
   char *endptr;
   int error;
   char *pos;
-  struct range_query_result r_result;
+  struct range_query_result r;
   char outbuff[200];
   char *start_data = "{ \"data\" : [";
   char *end_data = " ]}";
   time_t start_date;
   s_time = strtol(parts[TIME_START_POS], &endptr, 10);
   if (endptr && *endptr != '\0') {
-//printf("Can't get time %d.\n", *endptr);
-    return -1;
-  }
-  e_time = strtol(parts[TIME_END_POS], &endptr, 10);
-  if (endptr && *endptr != '\0') {
-//printf("Can't get time %d.\n", *endptr);
     return -1;
   }
 
-//printf("reading data s_time %ld, e_time %ld \n", s_time, e_time);
+  e_time = strtol(parts[TIME_END_POS], &endptr, 10);
+  if (endptr && *endptr != '\0') {
+    return -1;
+  }
+
   pos = strstr(parts[NAME_POS], "\n");
   if (pos) {
     *pos = '\0';
   }
 
-  r_result = get_range(server->ds, parts[NAME_POS], s_time, e_time, &error);
-  if(error < 0) {
-    free_range_query(&r_result); 
-    return -1;
-  }
-  start_date = r_result.start_date;
-//printf("sending data to stream \n");
   tcpsend(sk, start_data, strlen(start_data), -1);
-  for(time_t i = s_time;  i <= e_time; i++)
-  {
+  for(time_t t_point = init_ds_iter(s_time); t_point <= e_time; t_point = incr_ds_iter(t_point, SHARD_SIZE)) {
+    time_t pos = 0;
+    r = ds_current(server->ds, parts[NAME_POS], t_point, &error);
+    pos = r.start_date;
     char p_template[] = "[%ld000, %f],";
-    if(i == e_time) {
-      p_template[strlen(p_template) - 1] = '\0';
+    if(s_time >= r.start_date && s_time <= r.start_date +  r.shard_size) {
+      pos = s_time;
     }
-    sprintf(outbuff, p_template, i,  r_result.points[i - start_date]);
-    tcpsend(sk, outbuff, strlen(outbuff), -1);
+
+//printf("rounnnnnd e_time %ld, t_point %ld, inc %ld \n", e_time, t_point, incr_week(t_point, SHARD_SIZE));
+    for(time_t i = pos; i <= e_time && (i - r.start_date) < r.shard_size; i++) {
+      if(i == e_time) {
+        p_template[strlen(p_template) - 1] = '\0';
+      }
+      sprintf(outbuff, p_template, i,  r.points[i - r.start_date]);
+      tcpsend(sk, outbuff, strlen(outbuff), -1);
+    }
   }
   tcpsend(sk, end_data, strlen(end_data), -1);
-//printf("done sending data to stream \n");
-//printf("flushing stream data \n");
   tcpflush(sk, -1);
-//printf("done flushing stream data \n");
-//printf("freeing memory range \n");
-  free_range_query(&r_result); 
+  free_range_query(&r); 
   return 0;
 }
 
@@ -160,7 +156,7 @@ coroutine void tcp_process_data(struct tcp_server* server, tcpsock sk) {
         break;
       break;
       case 'r':
-      printf("Read operation");
+//printf("Read operation");
         if (num_process != 4) {
           continue;
         }
@@ -172,7 +168,6 @@ coroutine void tcp_process_data(struct tcp_server* server, tcpsock sk) {
     }
     count++;
     if ( count == TCP_SERVER_YIELD_EVERY ) {
-      printf("Yielding \n");
       count = 0;
       yield();
     }

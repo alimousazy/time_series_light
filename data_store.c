@@ -43,7 +43,7 @@ static struct mill_file* init_file(char *f_name) {
   float f = 0.0;
   if(fd)
   {
-//printf("\nWriting zeorrrrrs to the file \n");
+    printf("\nWriting zeorrrrrs to the file \n");
     for(i = 0; i < SHARD_SIZE; i++) {
       mfwrite(fd, &f, sizeof(float), -1);
     }
@@ -59,23 +59,19 @@ static float *load_from_db(struct data_store *dp, char *key, float *to, size_t l
   int error_no;
   asprintf(&f_name, "./cache/%s", key);
   fd = init_file(f_name);
-//printf("opening file\n");
-
   if(!fd)
   {
-//printf("can't open file %s\n", key);
     goto cleanup;
   }
-//printf("mappping %s\n", key);
   data = mmap(0, len, PROT_WRITE | PROT_READ, MAP_SHARED, fd->fd, 0);
   if(data == MAP_FAILED) {
     perror("Can't map file (load from DB).");
     goto cleanup;
   }
-//printf("map done success read\n");
   error_no = 0;
 cleanup:
   if (fd) {
+    mfflush(fd, -1);
     mfclose(fd);
   }
   if (f_name) {
@@ -87,6 +83,13 @@ cleanup:
   return data == MAP_FAILED ? NULL : data;
 }
 
+
+time_t init_ds_iter(time_t p_time) {
+  return get_week_start(p_time);
+}
+time_t incr_ds_iter(time_t s, time_t length) {
+  return s + length;
+}
 
 struct range_query_result ds_current(struct data_store *dp, char *metric_name, time_t t_time,  int *error) {
   time_t week_s = get_week_start(t_time); 
@@ -103,7 +106,6 @@ struct range_query_result ds_current(struct data_store *dp, char *metric_name, t
   r_result.points     = load_from_db(dp, name, NULL, SHARD_LEN(float));
   r_result.s_type       = DS_MMAP;
   *error = 0;
-  printf("returing result \n");
   free(name);
   return r_result;
 }

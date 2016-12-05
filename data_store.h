@@ -42,6 +42,10 @@ struct range_query_result {
 };
 
 //public method
+//
+struct range_query_result ds_current(struct data_store *dp, char *metric_name, time_t t_time,  int *error);
+time_t init_ds_iter(time_t p_time);
+time_t incr_ds_iter(time_t p_time, time_t amount);
 struct data_store *create_data_store();
 int store_dp(struct data_store *dp, char *metric_name, time_t point_time, float value);
 struct range_query_result get_range(struct data_store *dp, char *metric_name, time_t start, time_t end_time,  int *error);

@@ -1,9 +1,10 @@
 
 #!/bin/bash 
-s_date=1480460000
-e_date=1480467200
+s_date=1480138844
+e_date=1480655019
 COUNTER=0
 while [  $s_date -lt $e_date ]; do
-  echo The counter is $s_date 
-	 let s_date=s_date+1 
+  rand=`awk -v min=1 -v max=80 'BEGIN{srand(); print int(min+rand()*(max-min+1))}'`
+  echo "w:$s_date:new_era:$rand" >> tm
+  let s_date=s_date+1 
 done
