@@ -1,8 +1,19 @@
 #include "data_store.h"
+#include "circular_cache.h"
+
+#define MMAP_CACHESIZE 100
+
+
+static void cleanup_cc(struct circular_cache* item) {
+  free(item->key);
+  munmap(item->value, SHARD_LEN(float)); 
+  item->key = NULL;
+}
 
 struct data_store *create_data_store(char *db_path) {
   char *err = NULL;
 	struct data_store *store = calloc(1, sizeof(struct data_store));
+  store->circ_cache = calloc(MMAP_CACHESIZE, sizeof(struct circular_cache));
   store->options    = rocksdb_options_create();
 
   long cpus = sysconf(_SC_NPROCESSORS_ONLN);  
@@ -57,6 +68,11 @@ static float *load_from_db(struct data_store *dp, char *key, float *to, size_t l
   struct mill_file *fd;
   float *data = NULL;
   int error_no;
+  struct circular_cache *cc;
+  if ((cc = circular_cache_find(dp->circ_cache, key, MMAP_CACHESIZE))) {
+    return (float *) cc->value;
+  }
+  //printf("not finding %s\n", key);
   asprintf(&f_name, "./cache/%s", key);
   fd = init_file(f_name);
   if(!fd)
@@ -67,6 +83,10 @@ static float *load_from_db(struct data_store *dp, char *key, float *to, size_t l
   if(data == MAP_FAILED) {
     perror("Can't map file (load from DB).");
     goto cleanup;
+  } else {
+    if(circular_cache_add(dp->circ_cache, key, data, MMAP_CACHESIZE) == -1) {
+      circular_cache_cleanup(dp->circ_cache, key, data, MMAP_CACHESIZE, cleanup_cc);
+    }
   }
   error_no = 0;
 cleanup:
@@ -158,6 +178,8 @@ void free_data_store(struct data_store *dp) {
 		free(dp->writeoptions);
 	if(dp->readoptions)
 		free(dp->readoptions);
+  if(dp->circ_cache) 
+    free(dp->circ_cache);
 	if (dp) 
 		free(dp);
 }
@@ -166,7 +188,7 @@ void free_range_query(struct range_query_result *query) {
   if(query->s_type == DS_MALLOC) {
     free(query->points);
   } else if(query->s_type == DS_MMAP) {
-    munmap(query->points, query->shard_size * sizeof(float));
+//    munmap(query->points, query->shard_size * sizeof(float));
   }
 }
 

@@ -25,6 +25,7 @@ struct data_store {
 	rocksdb_options_t *options;
 	rocksdb_writeoptions_t *writeoptions;
 	rocksdb_readoptions_t *readoptions;
+  struct circular_cache *circ_cache;
 };
 
 struct metric { 

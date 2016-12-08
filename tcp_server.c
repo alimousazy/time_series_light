@@ -111,7 +111,6 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
       pos = s_time;
     }
 
-//printf("rounnnnnd e_time %ld, t_point %ld, inc %ld \n", e_time, t_point, incr_week(t_point, SHARD_SIZE));
     for(time_t i = pos; i <= e_time && (i - r.start_date) < r.shard_size; i++) {
       if(i == e_time) {
         p_template[strlen(p_template) - 1] = '\0';
