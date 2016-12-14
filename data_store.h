@@ -1,5 +1,8 @@
 #pragma once
 
+#include <nanomsg/nn.h>
+#include <nanomsg/pipeline.h>
+#include "assert.h"
 #include "time_convert.h"
 #include <rocksdb/c.h>
 #include <unistd.h> 
@@ -25,6 +28,7 @@ struct data_store {
 	rocksdb_options_t *options;
 	rocksdb_writeoptions_t *writeoptions;
 	rocksdb_readoptions_t *readoptions;
+  int msg_sock;
   struct circular_cache *circ_cache;
 };
 
@@ -53,5 +57,7 @@ struct range_query_result get_range(struct data_store *dp, char *metric_name, ti
 void free_data_store(struct data_store *dp);
 void free_range_query(struct range_query_result *query);
 
+
+static int send_msg_to_master(struct data_store *dp, char *msg);
 static float *load_from_db(struct data_store *dp, char *key, float *to, size_t len); 
 static struct mill_file* init_file(char *f_name);

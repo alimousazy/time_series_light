@@ -14,28 +14,15 @@ struct data_store *create_data_store(char *db_path) {
   char *err = NULL;
 	struct data_store *store = calloc(1, sizeof(struct data_store));
   store->circ_cache = calloc(MMAP_CACHESIZE, sizeof(struct circular_cache));
-  store->options    = rocksdb_options_create();
-
-  long cpus = sysconf(_SC_NPROCESSORS_ONLN);  
-  rocksdb_options_increase_parallelism(store->options, (int)(cpus));
-  rocksdb_options_optimize_level_style_compaction(store->options, 0);
-  rocksdb_options_set_create_if_missing(store->options, 1);
-
-  store->db = rocksdb_open(store->options, db_path, &err);
-	if (err) 
-  {
-//printf("Error opening db %s", err);
-		return NULL;
-  }
-
-  store->writeoptions = rocksdb_writeoptions_create();
-  store->readoptions = rocksdb_readoptions_create();
-
+  store->msg_sock = nn_socket (AF_SP, NN_PUSH);
+  assert (store->msg_sock >= 0);
+  assert (nn_connect(store->msg_sock, "ipc:///tmp/test.ipc") >= 0);
   return store;
 }
 
 int store_dp(struct data_store *dp, char *metric_name, time_t point_time, float value) {
   char name[255];
+  char *met_key;
   time_t week_s = get_week_start(point_time); 
   float *data_points;
   if (week_s ==  -1) {
@@ -45,6 +32,10 @@ int store_dp(struct data_store *dp, char *metric_name, time_t point_time, float 
   data_points = load_from_db(dp, name, NULL, SHARD_LEN(float));
   if (data_points) {
     data_points[point_time  - week_s] = value;
+  }
+  if (asprintf(&met_key, "met-%s", metric_name) != -1) {
+    send_msg_to_master(dp, met_key);
+    free(met_key);
   }
   return 0;
 }
@@ -62,6 +53,12 @@ static struct mill_file* init_file(char *f_name) {
     fd = mfopen(f_name, O_RDWR | O_CREAT | O_NOFOLLOW, S_IRUSR | S_IWUSR);
   }
   return fd;
+}
+static int send_msg_to_master(struct data_store *dp, char *msg) {
+  int sz_msg = strlen (msg) + 1;
+  int bytes = nn_send (dp->msg_sock, msg, sz_msg, 0);
+  assert (bytes == sz_msg);
+  return bytes == sz_msg ? 1 : -1;
 }
 static float *load_from_db(struct data_store *dp, char *key, float *to, size_t len) {
   char *f_name = NULL;
@@ -170,6 +167,8 @@ struct range_query_result get_range(struct data_store *dp, char *metric_name, ti
 }
 
 void free_data_store(struct data_store *dp) {
+  if(dp->msg_sock >= 0) 
+    nn_shutdown (dp->msg_sock, 0);
 	if(dp->db)
 		free(dp->db);
 	if(dp->options)

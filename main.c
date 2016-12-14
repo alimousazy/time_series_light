@@ -1,26 +1,45 @@
 #include <stdio.h>
+#include <assert.h>
 #include "data_store.h"
 #include "tcp_server.h"
+#include <nanomsg/nn.h>
+#include <nanomsg/pipeline.h>
+#include "master_node.h"
 
 int main() {
-/*  struct data_store *st = create_data_store("/tmp/rocksdb_simple_example");
-  int error;
-  store_dp(st, "item_read_service", 1480387056, 1.3);
-  float point = get_dp(st, "item_read_service", 1480387056, &error);
-  printf("Data is %f.", point);
-  struct range_query_result r_result = get_range(st, "item_read_service", 1480387056, 1480387058, &error);
-  int start_date = r_result.start_date;
-  for(int i = 0;  i < r_result.num_shards * r_result.shard_size; i++)
-  {
-    printf("[%d, %f], \n",  start_date++,  r_result.points[i]);
-  }
-  free_data_store(st);
-  free_range_query(&r_result); */
-
-  struct data_store *ds = create_data_store("/tmp/rocksdb_simple_example");
   struct tcp_server *server = tcp_server_create(5555);
-  tcp_server_set_ds(server, ds);
-  tcp_server_accept(server);
-  tcp_server_cleanup(server);
+  long   cpus = sysconf(_SC_NPROCESSORS_ONLN);  
+  pid_t pid;
+  int i = 0;
+  for (i = 0; i < cpus - 1; ++i) {
+		pid = mfork();
+		if(pid < 0) {
+			 perror("Can't create new process");
+			 return 1;
+		}
+		if(pid > 0) {
+				break;
+		}
+  }
+
+  if (pid > 0) {
+    sleep(10);
+    printf("I'm slave \n");
+    struct data_store *ds = create_data_store("/tmp/rocksdb_simple_example");
+    tcp_server_set_ds(server, ds);
+    tcp_server_accept(server);
+    tcp_server_cleanup(server);
+  } else if (pid == 0) {
+    printf("I'm the master \n");
+    struct master_node *node = create_master_node("ipc:///tmp/test.ipc", "/tmp/rocksdb_simple_example");
+    if (!node) {
+      printf("Error can't create master node");
+      return -1;
+    }
+
+    printf("accepting \n");
+    master_node_accept_connect(node);
+    free_master_node(node);
+  }
   return 0;
 }
