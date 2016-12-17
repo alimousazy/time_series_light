@@ -1,6 +1,7 @@
 #pragma once
 
 #include "data_store.h"
+#include "util.h"
 
 #include <errno.h>
 #include <stdio.h>

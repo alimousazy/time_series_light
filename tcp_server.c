@@ -27,25 +27,6 @@ int tcp_server_accept(struct tcp_server* server) {
 }
 
 
-static int process_line(char *item, char **parts, char *sep, int n_parts) {
-  int i ;
-  char *cursoer = NULL;
-  for(i = 0; i < n_parts ; i++) {
-    char *str; 
-     if( i == 0) {
-       str = strtok_r(item, ":", &cursoer);
-     } else  {
-       str = strtok_r(NULL, ":", &cursoer);
-     }
-     if(!str) {
-//printf("Can't break up string\n");
-       break;
-     }
-     parts[i] = str;
-  }
-  return i;
-}
-
 static int write_data(struct tcp_server* server, char **parts) {
   const short TIME_POS = 1;
   const short NAME_POS = 2;
@@ -135,11 +116,11 @@ coroutine void tcp_process_data(struct tcp_server* server, tcpsock sk) {
 	while (1) {
     char *parts[3];   
     int num_process = 0;
-		size_t sz = tcprecvuntil(sk, inbuf, sizeof(inbuf), "\n", 1, deadline);
+		size_t sz = tcprecvuntil(sk, inbuf, sizeof(inbuf) - 1, "\n", 1, deadline);
 		inbuf[sz] = '\0';
 		if(errno != 0)
  	 	  goto cleanup;
-    num_process = process_line(inbuf, parts, ":", 4);
+    num_process = util_process_line(inbuf, parts, ":", 4);
     switch(inbuf[0]) {
       case 'w':
         if (num_process != 4) {

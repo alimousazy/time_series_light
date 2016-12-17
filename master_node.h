@@ -10,8 +10,11 @@
 #include <rocksdb/c.h>
 #include <unistd.h>
 
+#include "http_server.h"
+
 struct master_node {
   int sock;
+  struct http_server *meta_server;
 	rocksdb_t *db;
 	rocksdb_writeoptions_t *writeoptions;
 	rocksdb_readoptions_t *readoptions;

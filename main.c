@@ -5,11 +5,26 @@
 #include <nanomsg/nn.h>
 #include <nanomsg/pipeline.h>
 #include "master_node.h"
+#include "http_server.h"
+
+
+#define SIGNAL SIGINT 
+
+static int master_node_pipe[2];
+
+void signal_handler(int signo) {
+  printf("handling kill");
+    assert(signo == SIGNAL);
+    char b = signo;
+    ssize_t sz = write(master_node_pipe[1], &b, 1);
+    assert(sz == 1);
+}
+
 
 int main() {
   struct tcp_server *server = tcp_server_create(5555);
   long   cpus = sysconf(_SC_NPROCESSORS_ONLN);  
-  pid_t pid;
+  pid_t pid = 0;
   int i = 0;
   for (i = 0; i < cpus - 1; ++i) {
 		pid = mfork();
@@ -31,15 +46,18 @@ int main() {
     tcp_server_cleanup(server);
   } else if (pid == 0) {
     printf("I'm the master \n");
+    int err = pipe(master_node_pipe);
+    signal(SIGINT, signal_handler);
     struct master_node *node = create_master_node("ipc:///tmp/test.ipc", "/tmp/rocksdb_simple_example");
     if (!node) {
       printf("Error can't create master node");
       return -1;
     }
-
-    printf("accepting \n");
     master_node_accept_connect(node);
+	  fdwait(master_node_pipe[0], FDW_IN, -1);
+    printf("shutting down");
     free_master_node(node);
+    exit(0);
   }
   return 0;
 }

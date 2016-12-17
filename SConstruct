@@ -2,4 +2,4 @@ env = Environment(CCFLAGS='-g')
 env.Append(CPPPATH = ['/usr/local/include/'])
 env.Append(LIBPATH = ['/usr/local/lib/'])
 
-env.Program("time_series", ["main.c", "circular_cache.c", "data_store.c", "master_node.c", "time_convert.c", "tcp_server.c"], LIBS = ["pthread", "m", "rocksdb", "mill", "nanomsg"])
+env.Program("time_series", ["main.c", "circular_cache.c", "data_store.c", "master_node.c", "time_convert.c", "tcp_server.c", "http_server.c", "util.c"], LIBS = ["pthread", "m", "rocksdb", "mill", "nanomsg"])
