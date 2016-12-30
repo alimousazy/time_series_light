@@ -32,14 +32,13 @@ static void process_line(struct http_server *server, char *inbuf, tcpsock sk) {
   int64_t deadline;
   rocksdb_iterator_t *it = rocksdb_create_iterator(server->db, server->readoptions);
   int num = util_process_line(inbuf, parts, ":", part_num);
-  printf("Number is %d\n", num);
   if (num != 2) {
     tcpsend(sk, "ERROR", 5, -1);
   } else {
     size_t key_len = 0;
     long r_count = 0;
     rocksdb_iter_seek(it, parts[1], strlen(parts[1]));
-    while(rocksdb_iter_valid(it)) {
+    while (rocksdb_iter_valid(it)) {
       deadline = now() + http_server_timeout;
       const char *key = rocksdb_iter_key(it, &key_len);
       tcpsend(sk, key, key_len, deadline);
@@ -55,7 +54,6 @@ static void process_line(struct http_server *server, char *inbuf, tcpsock sk) {
   deadline = now() + http_server_timeout;
   rocksdb_iter_destroy(it);
   tcpflush(sk, -1);
-  printf("sending is done\n");
 }
 
 static coroutine void http_process_data(struct http_server* server, tcpsock sk) {

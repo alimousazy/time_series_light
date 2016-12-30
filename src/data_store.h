@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unistd.h>
 #include <nanomsg/nn.h>
 #include <nanomsg/pipeline.h>
 #include "assert.h"
@@ -29,6 +30,7 @@ struct data_store {
 	rocksdb_writeoptions_t *writeoptions;
 	rocksdb_readoptions_t *readoptions;
   int msg_sock;
+  char *m_folder;
   struct circular_cache *circ_cache;
 };
 

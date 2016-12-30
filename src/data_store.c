@@ -3,6 +3,7 @@
 
 #define MMAP_CACHESIZE 100
 
+static float const metric_list[SHARD_SIZE];
 
 static void cleanup_cc(struct circular_cache* item) {
   free(item->key);
@@ -10,13 +11,31 @@ static void cleanup_cc(struct circular_cache* item) {
   item->key = NULL;
 }
 
+static int metric_exists(char *base, char *name) {
+  char *f_name;
+  if (asprintf(&f_name,  "%s/%s", base, name)) {
+    if( access( f_name, F_OK ) != -1 ) {
+      return 1;
+    } 
+    free(f_name);
+  }
+  return 0;
+}
+
 struct data_store *create_data_store(char *db_path) {
-  char *err = NULL;
 	struct data_store *store = calloc(1, sizeof(struct data_store));
   store->circ_cache = calloc(MMAP_CACHESIZE, sizeof(struct circular_cache));
   store->msg_sock = nn_socket (AF_SP, NN_PUSH);
-  assert (store->msg_sock >= 0);
-  assert (nn_connect(store->msg_sock, "ipc:///tmp/test.ipc") >= 0);
+  store->m_folder = strdup(db_path);
+  if (!store->m_folder) {
+    return NULL;
+  }
+  if (store->msg_sock <= 0) {
+    return NULL;
+  }
+  if (nn_connect(store->msg_sock, "ipc:///tmp/test.ipc") <= 0) {
+    return NULL;
+  }
   return store;
 }
 
@@ -32,6 +51,8 @@ int store_dp(struct data_store *dp, char *metric_name, time_t point_time, float 
   data_points = load_from_db(dp, name, NULL, SHARD_LEN(float));
   if (data_points) {
     data_points[point_time  - week_s] = value;
+  } else {
+    return -1;
   }
   if (asprintf(&met_key, "met-%s", metric_name) != -1) {
     send_msg_to_master(dp, met_key);
@@ -45,7 +66,6 @@ static struct mill_file* init_file(char *f_name) {
   float f = 0.0;
   if(fd)
   {
-    printf("\nWriting zeorrrrrs to the file \n");
     for(i = 0; i < SHARD_SIZE; i++) {
       mfwrite(fd, &f, sizeof(float), -1);
     }
@@ -69,8 +89,7 @@ static float *load_from_db(struct data_store *dp, char *key, float *to, size_t l
   if ((cc = circular_cache_find(dp->circ_cache, key, MMAP_CACHESIZE))) {
     return (float *) cc->value;
   }
-  //printf("not finding %s\n", key);
-  asprintf(&f_name, "./cache/%s", key);
+  asprintf(&f_name, "%s/%s", dp->m_folder,  key);
   fd = init_file(f_name);
   if(!fd)
   {
@@ -82,7 +101,7 @@ static float *load_from_db(struct data_store *dp, char *key, float *to, size_t l
     goto cleanup;
   } else {
     if(circular_cache_add(dp->circ_cache, key, data, MMAP_CACHESIZE) == -1) {
-      circular_cache_cleanup(dp->circ_cache, key, data, MMAP_CACHESIZE, cleanup_cc);
+      circular_cache_cleanup(dp->circ_cache, MMAP_CACHESIZE, cleanup_cc);
     }
   }
   error_no = 0;
@@ -97,7 +116,7 @@ cleanup:
   if (error_no == 0 && to) {
     memcpy(to, data, len);
   }
-  return data == MAP_FAILED ? NULL : data;
+  return data == MAP_FAILED || error_no > 0 ? NULL : data;
 }
 
 
@@ -120,7 +139,11 @@ struct range_query_result ds_current(struct data_store *dp, char *metric_name, t
   r_result.shard_size = SHARD_SIZE;
   r_result.start_date = week_s;
   asprintf(&name, METRIC_FORMAT, metric_name, week_s); 
-  r_result.points     = load_from_db(dp, name, NULL, SHARD_LEN(float));
+  if (metric_exists(dp->m_folder, name)) {
+    r_result.points     = load_from_db(dp, name, NULL, SHARD_LEN(float));
+  } else {
+    r_result.points     = (float *) metric_list;
+  }
   r_result.s_type       = DS_MMAP;
   *error = 0;
   free(name);
@@ -167,18 +190,20 @@ struct range_query_result get_range(struct data_store *dp, char *metric_name, ti
 }
 
 void free_data_store(struct data_store *dp) {
-  if(dp->msg_sock >= 0) 
-    nn_shutdown (dp->msg_sock, 0);
-	if(dp->db)
-		free(dp->db);
-	if(dp->options)
-		free(dp->options);
-	if(dp->writeoptions)
-		free(dp->writeoptions);
-	if(dp->readoptions)
-		free(dp->readoptions);
-  if(dp->circ_cache) 
+  if (dp->msg_sock >= 0) 
+     nn_shutdown (dp->msg_sock, 0);
+	if (dp->db)
+		 free(dp->db);
+	if (dp->options)
+		 free(dp->options);
+	if (dp->writeoptions)
+		 free(dp->writeoptions);
+	if (dp->readoptions)
+		 free(dp->readoptions);
+  if (dp->circ_cache) 
     free(dp->circ_cache);
+  if (dp->m_folder) 
+     free(dp->m_folder);
 	if (dp) 
 		free(dp);
 }

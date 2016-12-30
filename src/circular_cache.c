@@ -18,7 +18,6 @@ int circular_cache_add(struct circular_cache *list, char *key, void *value, int 
   int i = 0;
   for(i = 0; i < length; i++) {
     if(!list[i].key) {
-      printf("added %s\n", key);
       list[i] = tmp;
       return 0;
     }
@@ -26,12 +25,14 @@ int circular_cache_add(struct circular_cache *list, char *key, void *value, int 
   return -1;
 }
 
-void circular_cache_cleanup(struct circular_cache *list, char *key, void *value, int length, circular_cache_cleanup_cb func) {
+void circular_cache_cleanup(struct circular_cache *list, int length, circular_cache_cleanup_cb func) {
   srand(time(NULL));
-  for(int i = 0; i < length / 2; i++) {
+  for(int i = 0; i < (length + 1) / 2; i++) {
     int id = rand() % length;
     if(list[id].key) {
       func(&list[id]);
+      free(list[id].key);
+      list[id].key = NULL;
     }
   }
 }

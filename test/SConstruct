@@ -1,0 +1,6 @@
+env = Environment(CCFLAGS="-g")
+env.Append(CPPPATH = ['/usr/local/include/'])
+env.Append(LIBPATH = ['/usr/local/lib/'])
+
+env.Program("test_cicular_cache", ["test_circular_cache.c", "../src/circular_cache.c"], LIBS = ["cmocka", "pthread", "m", "rocksdb", "mill", "nanomsg"])
+env.Program("test_data_store", ["test_data_store.c", "../src/data_store.c", "../src/circular_cache.c", "../src/time_convert.c"], LIBS = ["cmocka", "pthread", "m", "rocksdb", "mill", "nanomsg"])
