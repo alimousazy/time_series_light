@@ -150,45 +150,6 @@ struct range_query_result ds_current(struct data_store *dp, char *metric_name, t
   return r_result;
 }
 
-struct range_query_result get_range(struct data_store *dp, char *metric_name, time_t start, time_t end_time,  int *error) {
-  time_t week_s = get_week_start(start); 
-  time_t week_e = get_week_start(end_time); 
-  struct range_query_result r_result;
-  float *points = NULL;
-  int num_shards = 1;
-  time_t tmp = week_s; 
-  if (week_s ==  -1 || week_e == -1) {
-    *error = -1;
-    return r_result;
-  }
-  while(tmp != week_e) {
-    tmp =  get_week_start(tmp + SHARD_SIZE + 10);
-    num_shards++;
-  }
-  r_result.num_shards = num_shards;
-  r_result.shard_size = SHARD_SIZE;
-  r_result.start_date = week_s;
-  r_result.s_type       = DS_MALLOC;
-  r_result.points = calloc(SHARD_SIZE * num_shards, sizeof(float));
-  if (!r_result.points) {
-    *error = -2;
-    return r_result;
-  }
-  int num_week = 0;
-  for(time_t start = week_s; start <= week_e; start = incr_week(start, SHARD_SIZE), num_week++) {
-    char name[255];
-    float *data;
-    sprintf(name, METRIC_FORMAT, metric_name, start); 
-    data = load_from_db(dp, name, r_result.points + (num_week * SHARD_SIZE), SHARD_LEN(float));
-    if ( data ) {
-      munmap(data, SHARD_LEN(float)); 
-    }
-  }
-  *error = 0;
-  printf("returing result \n");
-  return r_result;
-}
-
 void free_data_store(struct data_store *dp) {
   if (dp->msg_sock >= 0) 
      nn_shutdown (dp->msg_sock, 0);
