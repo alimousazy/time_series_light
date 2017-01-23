@@ -26,8 +26,9 @@ int circular_cache_add(struct circular_cache *list, char *key, void *value, int 
 }
 
 void circular_cache_cleanup(struct circular_cache *list, int length, circular_cache_cleanup_cb func) {
+  int i = 0;
   srand(time(NULL));
-  for(int i = 0; i < (length + 1) / 2; i++) {
+  for(i = 0; i < (length + 1) / 2; i++) {
     int id = rand() % length;
     if(list[id].key) {
       func(&list[id]);

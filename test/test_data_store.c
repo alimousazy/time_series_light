@@ -80,8 +80,9 @@ void test_storing_data_point(void **state) {
   will_return(nn_connect, 1);
   will_return(nn_socket, 1);
   struct data_store *dt =  create_data_store("/tmp/cache");
+  int n = 0;
   int test_num = 0;
-  for (int n = 0; n < sizeof(metric_list) / sizeof(metric_list[0]); n++) {
+  for (n = 0; n < sizeof(metric_list) / sizeof(metric_list[0]); n++) {
     int result = store_dp(dt, metric_list[n].name, metric_list[n].t_time, metric_list[n].value);
     assert_true(result > -1);
   }
@@ -91,9 +92,10 @@ void test_retrieve_data_point(void **state) {
   will_return(nn_connect, 1);
   will_return(nn_socket, 1);
   struct range_query_result r;
+  int n = 0;
   int error;
   struct data_store *dt =  create_data_store("/tmp/cache");
-  for (int n = 0; n < sizeof(metric_list) / sizeof(metric_list[0]); n++) {
+  for (n = 0; n < sizeof(metric_list) / sizeof(metric_list[0]); n++) {
     time_t p_time = metric_list[n].t_time;
     time_t s_start = init_ds_iter(p_time);
     r = ds_current(dt, metric_list[n].name, s_start, &error);

@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <assert.h>
-#include "data_store.h"
-#include "tcp_server.h"
+#include <signal.h>
 #include <nanomsg/nn.h>
 #include <nanomsg/pipeline.h>
+#include "data_store.h"
+#include "tcp_server.h"
 #include "master_node.h"
 #include "http_server.h"
 
@@ -38,7 +39,6 @@ int main() {
   }
 
   if (pid > 0) {
-    sleep(10);
     printf("I'm slave \n");
     struct data_store *ds = create_data_store("/tmp/rocksdb_simple_example");
     tcp_server_set_ds(server, ds);

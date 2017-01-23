@@ -66,7 +66,7 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
   char outbuff[200];
   char *start_data = "{ \"data\" : [";
   char *end_data = " ]}";
-  time_t start_date;
+  time_t start_date, t_point, i;
   s_time = strtol(parts[TIME_START_POS], &endptr, 10);
   if (endptr && *endptr != '\0') {
     return -1;
@@ -83,7 +83,7 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
   }
 
   tcpsend(sk, start_data, strlen(start_data), -1);
-  for(time_t t_point = init_ds_iter(s_time); t_point <= e_time; t_point = incr_ds_iter(t_point, SHARD_SIZE)) {
+  for(t_point = init_ds_iter(s_time); t_point <= e_time; t_point = incr_ds_iter(t_point, SHARD_SIZE)) {
     time_t pos = 0;
     r = ds_current(server->ds, parts[NAME_POS], t_point, &error);
     pos = r.start_date;
@@ -92,7 +92,7 @@ static int read_data(struct tcp_server* server, char **parts, tcpsock sk) {
       pos = s_time;
     }
 
-    for(time_t i = pos; i <= e_time && (i - r.start_date) < r.shard_size; i++) {
+    for(i = pos; i <= e_time && (i - r.start_date) < r.shard_size; i++) {
       if(i == e_time) {
         p_template[strlen(p_template) - 1] = '\0';
       }

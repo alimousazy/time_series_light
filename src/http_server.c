@@ -2,10 +2,12 @@
 
 struct http_server *http_server_create(int port) {	
 	struct http_server *server; 
+  assert(port > 0);
 	if( port < 0 ) {
 		return NULL;
 	}
 	server = malloc(sizeof(struct http_server));
+  assert(server != 0);
 	if (!server)
 		return NULL;
 	ipaddr addr = iplocal(NULL, port, 0);
@@ -20,6 +22,7 @@ struct http_server *http_server_create(int port) {
 coroutine void http_server_accept(struct http_server* server) {
 	while (1) {
 		tcpsock as = tcpaccept(server->sk, -1);
+    assert(as > 0);
     if(!as)
        return;
 		go(http_process_data(server, as));
