@@ -24,16 +24,16 @@ static int metric_exists(char *base, char *name) {
 
 struct data_store *create_data_store(char *db_path) {
 	struct data_store *store = calloc(1, sizeof(struct data_store));
+  int conn;
   store->circ_cache = calloc(MMAP_CACHESIZE, sizeof(struct circular_cache));
   store->msg_sock = nn_socket (AF_SP, NN_PUSH);
+  assert(store->msg_sock > -1);
   store->m_folder = strdup(db_path);
-  if (!store->m_folder) {
-    return NULL;
-  }
-  if (store->msg_sock <= 0) {
-    return NULL;
-  }
-  if (nn_connect(store->msg_sock, "ipc:///tmp/test.ipc") <= 0) {
+  assert(store->m_folder);
+  conn = nn_connect(store->msg_sock, "ipc:///tmp/test.ipc");
+  assert(conn);
+  if (conn <= 0) {
+    printf("Can't connect to msg_sock\n");
     return NULL;
   }
   return store;
@@ -93,6 +93,7 @@ static float *load_from_db(struct data_store *dp, char *key, float *to, size_t l
   fd = init_file(f_name);
   if(!fd)
   {
+    printf("Can't create file %s", f_name);
     goto cleanup;
   }
   data = mmap(0, len, PROT_WRITE | PROT_READ, MAP_SHARED, fd->fd, 0);

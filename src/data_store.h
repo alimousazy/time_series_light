@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <libmill.h>
+#include <assert.h>
 
 #define METRIC_FORMAT  "%s-%ld"
 #define DB_NAME "time_series"
