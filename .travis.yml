@@ -11,6 +11,7 @@ before_install:
   - brew install rocksdb
   - brew install nanomsg
   - brew install scons 
+  - brew install libmill 
 
 script:
   - cd src
