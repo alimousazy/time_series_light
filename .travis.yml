@@ -8,7 +8,7 @@ compiler:
 
 before_install:
   - brew update 
-  - brew install rocksdb
+  - brew install --without-lite rocksdb
   - brew install nanomsg
   - brew install scons 
   - brew install libmill 
