@@ -1,0 +1,17 @@
+language: c
+
+os:
+  - osx
+
+compiler:
+  - clang
+
+before_install:
+  - brew update 
+  - brew install rocksdb
+  - brew install nanomsg
+  - brew install scons 
+
+script:
+  - cd src
+  - scons 
