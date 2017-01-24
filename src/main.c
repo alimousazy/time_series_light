@@ -25,6 +25,7 @@ void signal_handler(int signo) {
 int main() {
   struct tcp_server *server = tcp_server_create(5555);
   long   cpus = sysconf(_SC_NPROCESSORS_ONLN);  
+  cpus = cpus == 1 ? 2 : cpus;
   pid_t pid = 0;
   int i = 0;
   for (i = 0; i < cpus - 1; ++i) {
@@ -39,6 +40,7 @@ int main() {
   }
 
   if (pid > 0) {
+    sleep(10);
     printf("I'm slave \n");
     struct data_store *ds = create_data_store("/tmp/rocksdb_simple_example");
     tcp_server_set_ds(server, ds);
