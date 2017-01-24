@@ -17,11 +17,8 @@ static coroutine void meta_data_handler (struct master_node *node) {
     char *err = NULL;
     int raw_sock_id;
     size_t sock_size = sizeof(raw_sock_id);
-    printf("Waiting for meta \n");
     int events = fdwait(getfd(node->sock), FDW_IN, -1);
-    printf("done Waiting for meta \n");
     int bytes = nn_recv (node->sock, &buf, NN_MSG, 0);
-    printf(" key is %s  \n", buf);
     //temp
     key = buf;
     rocksdb_put(node->db, node->writeoptions, key, strlen(key), value, strlen(value) + 1, &err);
