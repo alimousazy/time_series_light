@@ -37,17 +37,14 @@ static int write_data(struct tcp_server* server, char **parts) {
   int error;
   m_time = strtol(parts[TIME_POS], &endptr, 10);
   if (endptr && *endptr != '\0') {
-//printf("Can't get time %d.\n", *endptr);
     return -1;
   }
   value = strtof(parts[VALUE_POS], &endptr);
   if (endptr && *endptr != '\n') {
-//printf("Can't get value %f, '%c'\n", value, *endptr);
     return -1;
   }
   error = store_dp(server->ds, parts[NAME_POS], m_time, value);
   if(error < 0) {
-//printf("error storing data");
     return -1;
   }
   return 0;
@@ -132,16 +129,13 @@ coroutine void tcp_process_data(struct tcp_server* server, tcpsock sk) {
            tcpsend(sk, error, strlen(error), -1);
         };
         tcpflush(sk, -1);
-//printf("\nWrite done\n");
         break;
       break;
       case 'r':
-//printf("Read operation");
         if (num_process != 4) {
           continue;
         }
         if (read_data(server, parts, sk) == -1) {
-//printf("Error reading data");
         }
         goto cleanup;
       break;
@@ -153,11 +147,12 @@ coroutine void tcp_process_data(struct tcp_server* server, tcpsock sk) {
     }
 	}
 	cleanup:
-//printf("closing connection \n");
 		tcpclose(sk);
 }
 
 void tcp_server_set_ds(struct tcp_server *server, struct data_store *ds) {
+  assert(ds);
+  assert(server);
   server->ds = ds;
 }
 
