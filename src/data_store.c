@@ -40,6 +40,9 @@ struct data_store *create_data_store(char *db_path) {
 }
 
 int store_dp(struct data_store *dp, char *metric_name, time_t point_time, float value) {
+  assert(dp);
+  assert(metric_name);
+  assert(point_time > 0);
   char name[255];
   char *met_key;
   time_t week_s = get_week_start(point_time); 
@@ -61,6 +64,7 @@ int store_dp(struct data_store *dp, char *metric_name, time_t point_time, float 
   return 0;
 }
 static struct mill_file* init_file(char *f_name) {
+  assert(f_name);
   struct mill_file *fd = mfopen(f_name, O_RDWR | O_CREAT | O_NOFOLLOW | O_EXCL, S_IRUSR | S_IWUSR);
   int i = 0;
   float f = 0.0;
@@ -75,12 +79,19 @@ static struct mill_file* init_file(char *f_name) {
   return fd;
 }
 static int send_msg_to_master(struct data_store *dp, char *msg) {
+  assert(dp);
+  assert(msg);
+
   int sz_msg = strlen (msg) + 1;
   int bytes = nn_send (dp->msg_sock, msg, sz_msg, 0);
   assert (bytes == sz_msg);
   return bytes == sz_msg ? 1 : -1;
 }
 static float *load_from_db(struct data_store *dp, char *key, float *to, size_t len) {
+  assert(dp);
+  assert(key);
+  assert(to);
+  assert(len);
   char *f_name = NULL;
   struct mill_file *fd;
   float *data = NULL;
@@ -173,9 +184,7 @@ void free_data_store(struct data_store *dp) {
 void free_range_query(struct range_query_result *query) {
   if(query->s_type == DS_MALLOC) {
     free(query->points);
-  } else if(query->s_type == DS_MMAP) {
-//    munmap(query->points, query->shard_size * sizeof(float));
-  }
+  } 
 }
 
 
