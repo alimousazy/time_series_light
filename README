@@ -1,5 +1,23 @@
-[![Code Triagers Badge](https://www.codetriage.com/alimousazy/time_series_light/badges/users.svg)](https://www.codetriage.com/alimousazy/time_series_light)
+![Code Triagers Badge](https://www.codetriage.com/alimousazy/time_series_light/badges/users.svg)](https://www.codetriage.com/alimousazy/time_series_light)
 
 Time Series Light:
+
+Time series light is a time series database fully written in C. it use light weight coroutine to scale which make it possible to handle
+thousand of request on system with low-end hardware or embeded applicaiton and it use files as storage for time series data, make it easy to
+recover and embed in other application. 
+
+The application it self is under heavly deployement but it is currently does support:
+1- Indexing time series data.
+2- Reading time series data.
+3- Searching metadata for time series names.
+
+Still need to be done:
+1- TTL for time series content.
+2- Replication (Long term).
+3- Configration.
+4- More unit testing.
+5- Memory leak checks.
+6- Performance optimization. 
+
 
 
