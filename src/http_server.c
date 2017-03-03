@@ -44,6 +44,9 @@ static void process_line(struct http_server *server, char *inbuf, tcpsock sk) {
     while (rocksdb_iter_valid(it)) {
       deadline = now() + http_server_timeout;
       const char *key = rocksdb_iter_key(it, &key_len);
+      if(strncmp(key, parts[1], strlen(parts[1])) != 0) {
+        break;
+      }
       tcpsend(sk, key, key_len, deadline);
       tcpsend(sk, ",", 1, deadline);
       rocksdb_iter_next(it);
@@ -64,7 +67,6 @@ static coroutine void http_process_data(struct http_server* server, tcpsock sk) 
 	char inbuf[250];
   int buf_size = sizeof(inbuf) - 1;
 	while (buf_size > 0) {
-    char *parts[3];   
     int num_process = 0;
 		size_t sz = tcprecvuntil(sk, inbuf, buf_size, "\n", 1, deadline);
     inbuf[sz - 1] = '\0';

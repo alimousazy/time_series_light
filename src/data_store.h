@@ -62,5 +62,5 @@ void free_range_query(struct range_query_result *query);
 
 
 static int send_msg_to_master(struct data_store *dp, char *msg);
-static float *load_from_db(struct data_store *dp, char *key, float *to, size_t len); 
+static float *load_from_db(struct data_store *dp, char *key, size_t len); 
 static struct mill_file* init_file(char *f_name);

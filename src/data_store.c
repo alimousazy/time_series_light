@@ -27,7 +27,10 @@ struct data_store *create_data_store(char *db_path) {
   int conn;
   store->circ_cache = calloc(MMAP_CACHESIZE, sizeof(struct circular_cache));
   store->msg_sock = nn_socket (AF_SP, NN_PUSH);
-  assert(store->msg_sock > -1);
+  if(store->msg_sock == -1) {
+    printf("Can't create socket %d\n");
+    return NULL;
+  }
   store->m_folder = strdup(db_path);
   assert(store->m_folder);
   conn = nn_connect(store->msg_sock, "ipc:///tmp/test.ipc");
@@ -51,7 +54,7 @@ int store_dp(struct data_store *dp, char *metric_name, time_t point_time, float 
     return -1;
   }
   sprintf(name, METRIC_FORMAT, metric_name, week_s); 
-  data_points = load_from_db(dp, name, NULL, SHARD_LEN(float));
+  data_points = load_from_db(dp, name, SHARD_LEN(float));
   if (data_points) {
     data_points[point_time  - week_s] = value;
   } else {
@@ -87,10 +90,9 @@ static int send_msg_to_master(struct data_store *dp, char *msg) {
   assert (bytes == sz_msg);
   return bytes == sz_msg ? 1 : -1;
 }
-static float *load_from_db(struct data_store *dp, char *key, float *to, size_t len) {
+static float *load_from_db(struct data_store *dp, char *key, size_t len) {
   assert(dp);
   assert(key);
-  assert(to);
   assert(len);
   char *f_name = NULL;
   struct mill_file *fd;
@@ -125,9 +127,6 @@ cleanup:
   if (f_name) {
     free(f_name);
   }
-  if (error_no == 0 && to) {
-    memcpy(to, data, len);
-  }
   return data == MAP_FAILED || error_no > 0 ? NULL : data;
 }
 
@@ -152,7 +151,7 @@ struct range_query_result ds_current(struct data_store *dp, char *metric_name, t
   r_result.start_date = week_s;
   asprintf(&name, METRIC_FORMAT, metric_name, week_s); 
   if (metric_exists(dp->m_folder, name)) {
-    r_result.points     = load_from_db(dp, name, NULL, SHARD_LEN(float));
+    r_result.points     = load_from_db(dp, name, SHARD_LEN(float));
   } else {
     r_result.points     = (float *) metric_list;
   }
