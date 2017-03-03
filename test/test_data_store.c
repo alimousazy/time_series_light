@@ -65,7 +65,7 @@ void test_creating_data_store(void **state) {
 
 void test_creating_data_store_cant_connect(void **state) {
   will_return(nn_connect, -1);
-  will_return(nn_socket, 1);
+  will_return(nn_socket, 3);
   struct data_store *dt =  create_data_store("/tmp/cache");
   assert_null(dt);
 }
